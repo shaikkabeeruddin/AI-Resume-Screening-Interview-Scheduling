@@ -27,6 +27,8 @@ ai-resume-screening/
 │       ├── llm.py
 │       └── nocodb.py
 │
+├── frontend/
+│     └── app.py
 ├── uploads/
 ├── .env
 ├── requirements.txt
