@@ -1,0 +1,675 @@
+{
+  "name": "AI Resume Screening Interview Scheduler",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "id": "81209d46-1e44-4e9a-a07a-d06788b8a3c7",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        240,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://app.nocodb.com/api/v2/tables/mly06c09yfevvaj/records",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "nocoDbApiToken",
+        "options": {}
+      },
+      "id": "4924e481-53a4-4aab-80d2-d81f17cd9ecc",
+      "name": "Fetch Candidates from NocoDB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        464,
+        400
+      ],
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "Vay4oPlzQEXLtCeX",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "Interview Invitation - AI Engineer Position",
+        "message": "=Dear {{ $json[\"Candidate Name\"] }},<br><br>We are pleased to invite you for an interview for the AI Engineer position.<br><br>Interview Details:<br>Date: {{ $now.plus(3, \"days\").toFormat(\"MMMM d, yyyy\") }}<br>Time: 9:00 AM - 12:30 PM<br><br>We look forward to speaking with you.<br><br>Best regards,<br>Hiring Team",
+        "options": {}
+      },
+      "id": "b3e4610b-8fd0-484f-bc10-94aaa6eecc01",
+      "name": "Send Interview Invitation Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1808,
+        32
+      ],
+      "webhookId": "981132f0-a885-4a8a-8ffd-66dcbf519ec9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "e627vyK7PYIv3IFw",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "primary",
+          "mode": "list",
+          "cachedResultName": "Primary"
+        },
+        "start": "={{ $now.plus(3, \"days\").set({ hour: 9, minute: 0 }).toISO() }}",
+        "end": "={{ $now.plus(3, \"days\").set({ hour: 12, minute: 30 }).toISO() }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $(\"Add NocoDB URL\").item.json.Email }}"
+          ],
+          "description": "AI Engineer Interview",
+          "summary": "=Interview - {{ $json[\"Candidate Name\"] }}"
+        }
+      },
+      "id": "51cee2b5-dda5-4d80-8609-b2b7163e0e14",
+      "name": "Create Google Calendar Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        2032,
+        32
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "PtnCXBOjW1gAOgUl",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "list",
+        "options": {}
+      },
+      "id": "7363c000-04cc-4482-b0ec-e73f7e2dae02",
+      "name": "Extract Candidate Records",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        688,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "nocodbBaseUrl",
+              "type": "string",
+              "value": "https://app.nocodb.com/api/v2/tables/mly06c09yfevvaj/records"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "5509e2fc-f962-4c27-8cb2-860a208fcb19",
+      "name": "Add NocoDB URL",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        912,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json[\"Application Status\"] }}",
+              "rightValue": "Interview Scheduled",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "leftValue": "={{ $json[\"Application Status\"] }}",
+              "rightValue": "Under Review",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "leftValue": "={{ $json[\"Application Status\"] }}",
+              "rightValue": "Rejected",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "leftValue": "={{ $json.Email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "leftValue": "={{ $json.Email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "any",
+                "operation": "exists"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e0219301-07e4-49fc-8ec6-4b5bfc93f557",
+      "name": "Filter Valid Candidates",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        1136,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "combinator": "and",
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.Recommendation }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "Shortlist"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Shortlist"
+            },
+            {
+              "conditions": {
+                "combinator": "and",
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.Recommendation }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "Review"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Review"
+            },
+            {
+              "conditions": {
+                "combinator": "and",
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.Recommendation }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "Reject"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Reject"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a5bd7587-104d-4ee3-8376-e65deeccfaae",
+      "name": "Route by Recommendation",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1360,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $(\"Add NocoDB URL\").item.json.nocodbBaseUrl }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"Id\": $(\"Add NocoDB URL\").item.json.Id, \"Application Status\": \"Interview Scheduled\" } }}",
+        "options": {}
+      },
+      "id": "409f9641-8ece-45f4-8c05-55090a442be6",
+      "name": "Update Status: Interview Scheduled",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2256,
+        112
+      ],
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "4nfMwdUWjqk1BTA5",
+          "name": "NocoDB Token account 2"
+        },
+        "httpHeaderAuth": {
+          "id": "HQWvxzUsCA7kug6a",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "0a43b0e8-6446-4aad-92fe-ed0ac5ef8a83",
+      "name": "Loop Shortlist Candidates",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1584,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "Application Update - AI Engineer Position",
+        "message": "=Dear {{ $json[\"Candidate Name\"] }},<br><br>Thank you for applying for the AI Engineer position.<br><br>Your application is currently under further review by our team. We appreciate your patience during this process.<br><br>If your profile is shortlisted, we will contact you with the next steps.<br><br>Best regards,<br>Hiring Team",
+        "options": {}
+      },
+      "id": "6dd5d0f6-ca55-487b-ae95-68fd3d8b11db",
+      "name": "Send Review Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1808,
+        320
+      ],
+      "webhookId": "117aadf5-bfa4-45f2-812a-73e40ac3b37c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "e627vyK7PYIv3IFw",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://app.nocodb.com/api/v2/tables/mly06c09yfevvaj/records",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"Id\": $(\"Add NocoDB URL\").item.json.Id, \"Application Status\": \"Under Review\" } }}",
+        "options": {}
+      },
+      "id": "812af76f-301a-4558-8da2-ca90225ef74f",
+      "name": "Update Status: Under Review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2032,
+        400
+      ],
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "4nfMwdUWjqk1BTA5",
+          "name": "NocoDB Token account 2"
+        },
+        "httpHeaderAuth": {
+          "id": "HQWvxzUsCA7kug6a",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "eb74a526-fbb0-49ef-9979-8a8f5353030f",
+      "name": "Loop Review Candidates",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1584,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "Application Status - AI Engineer Position",
+        "message": "=Dear {{ $json[\"Candidate Name\"] }},<br><br>Thank you for taking the time to apply for the AI Engineer position with us.<br><br>After careful consideration, we regret to inform you that we will not be moving forward with your application at this time.<br><br>We appreciate your interest in our company and wish you the very best in your job search.<br><br>Best regards,<br>Hiring Team",
+        "options": {}
+      },
+      "id": "3f9fcd5d-1eae-408a-a589-4a708a9f1e3e",
+      "name": "Send Rejection Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1808,
+        608
+      ],
+      "webhookId": "b1dece03-0f41-47db-aaf5-2535a1f3886f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "e627vyK7PYIv3IFw",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://app.nocodb.com/api/v2/tables/mly06c09yfevvaj/records",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"Id\": $(\"Add NocoDB URL\").item.json.Id, \"Application Status\": \"Rejected\" } }}",
+        "options": {}
+      },
+      "id": "7136af1b-6892-4617-8e5f-eb580c30324b",
+      "name": "Update Status: Rejected",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2032,
+        688
+      ],
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "4nfMwdUWjqk1BTA5",
+          "name": "NocoDB Token account 2"
+        },
+        "httpHeaderAuth": {
+          "id": "HQWvxzUsCA7kug6a",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "7359e4b4-a856-407c-b67c-d8202eddf167",
+      "name": "Loop Reject Candidates",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1584,
+        688
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Fetch Candidates from NocoDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Candidates from NocoDB": {
+      "main": [
+        [
+          {
+            "node": "Extract Candidate Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Interview Invitation Email": {
+      "main": [
+        [
+          {
+            "node": "Create Google Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Google Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Update Status: Interview Scheduled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Candidate Records": {
+      "main": [
+        [
+          {
+            "node": "Add NocoDB URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add NocoDB URL": {
+      "main": [
+        [
+          {
+            "node": "Filter Valid Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Valid Candidates": {
+      "main": [
+        [
+          {
+            "node": "Route by Recommendation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Recommendation": {
+      "main": [
+        [
+          {
+            "node": "Loop Shortlist Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Review Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Reject Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status: Interview Scheduled": {
+      "main": [
+        [
+          {
+            "node": "Loop Shortlist Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Shortlist Candidates": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Send Interview Invitation Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Review Email": {
+      "main": [
+        [
+          {
+            "node": "Update Status: Under Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status: Under Review": {
+      "main": [
+        [
+          {
+            "node": "Loop Review Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Review Candidates": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Send Review Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Rejection Email": {
+      "main": [
+        [
+          {
+            "node": "Update Status: Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status: Rejected": {
+      "main": [
+        [
+          {
+            "node": "Loop Reject Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Reject Candidates": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Send Rejection Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "9afc20b7-4758-43c3-8786-67a6fd94d565",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9fcbbdcfe06c7d5181be9be371b8fc584d63e0f86077c01af1da041973016576"
+  },
+  "nodeGroups": [],
+  "id": "1yiMxlQvSWcqKDiW",
+  "tags": []
+}
